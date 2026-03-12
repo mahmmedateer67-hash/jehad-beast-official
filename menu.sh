@@ -1,10 +1,9 @@
 #!/bin/bash
 
 # ==============================================================================
-# JEHAD BEAST - THE ULTIMATE VPS MANAGER v5.0 (CYBER EDITION)
+# JEHAD BEAST - THE ULTIMATE VPS MANAGER v5.5 (CYBER EDITION)
 # ==============================================================================
-# This is the main entry point for the Jehad Beast system.
-# Integrated with Firewoods Logic, SSL Tunneling, and DNSTT Beast.
+# Integrated with Mass Session Killer, SSL Tunneling, and DNSTT Beast.
 # ==============================================================================
 
 # --- [ GLOBAL PATHS ] ---
@@ -12,7 +11,6 @@ BASE_DIR="/etc/jehad"
 CORE_DIR="$BASE_DIR/core"
 MOD_DIR="$BASE_DIR/modules"
 LOG_DIR="$BASE_DIR/logs"
-CONF_FILE="$BASE_DIR/jehad.conf"
 
 # --- [ COLORS ] ---
 C_RESET=$'\033[0m'
@@ -31,10 +29,12 @@ if [ -d "/etc/jehad/modules" ]; then
     source "/etc/jehad/modules/dnstt_beast.sh"
     source "/etc/jehad/modules/user_net.sh"
     source "/etc/jehad/modules/ssl_tunnel.sh"
+    source "/etc/jehad/core/session_killer.sh"
 else
     source "./modules/dnstt_beast.sh"
     source "./modules/user_net.sh"
     source "./modules/ssl_tunnel.sh"
+    source "./core/session_killer.sh"
 fi
 
 # --- [ UI COMPONENTS ] ---
@@ -47,7 +47,7 @@ show_banner() {
     echo "██   ██║██╔══╝  ██╔══██║██╔══██║██║  ██║"
     echo "╚█████╔╝███████╗██║  ██║██║  ██║██████╔╝"
     echo " ╚════╝ ╚══════╝╚═╝  ╚═╝╚═╝  ╚═╝╚═════╝ "
-    echo -e "          JEHAD BEAST v5.0 (CYBER EDITION)${C_RESET}"
+    echo -e "          JEHAD BEAST v5.5 (CYBER EDITION)${C_RESET}"
     echo -e "${C_GRAY}---------------------------------------${C_RESET}"
 }
 
@@ -69,7 +69,8 @@ while true; do
     echo -e "  ${C_CYAN}[6]${C_RESET} 🔒 Install SSL Tunnel (Port 444)"
     echo -e "  ${C_CYAN}[7]${C_RESET} 🗑️ Uninstall SSL Tunnel"
     echo -e "  ${C_GRAY}---------------------------------------${C_RESET}"
-    echo -e "  ${C_CYAN}[8]${C_RESET} Live Traffic Monitor"
+    echo -e "  ${C_RED}${C_BOLD}[8] 🔥 Mass Session Killer (Global Purge)${C_RESET}"
+    echo -e "  ${C_CYAN}[9]${C_RESET} 📊 Live Traffic Monitor"
     echo -e "  ${C_CYAN}[0]${C_RESET} Exit"
     echo
     read -p "👉 Choice: " choice
@@ -87,7 +88,8 @@ while true; do
         5) show_dnstt_status; press_enter ;;
         6) install_ssl_tunnel; press_enter ;;
         7) uninstall_ssl_tunnel; press_enter ;;
-        8) monitor_traffic ;;
+        8) mass_session_kill; press_enter ;;
+        9) monitor_traffic ;;
         0) exit 0 ;;
         *) echo -e "${C_RED}Invalid choice!${C_RESET}"; sleep 1 ;;
     esac
