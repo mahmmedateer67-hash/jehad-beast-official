@@ -1,7 +1,9 @@
 #!/bin/bash
 
 # ==============================================================================
-# JEHAD BEAST - ADVANCED SSL TUNNEL MODULE (PORT 444) - FORCE EDITION
+# 🔒 JEHAD BEAST - AUTONOMOUS SSL TUNNEL MODULE (PORT 444) - v6.0
+# ==============================================================================
+# High-performance SSL tunneling for social media bypass.
 # ==============================================================================
 
 # --- [ CONFIG & PATHS ] ---
@@ -23,36 +25,19 @@ C_BLUE=$'\033[38;5;39m'
 C_CYAN=$'\033[38;5;51m'
 C_RESET=$'\033[0m'
 
-# --- [ FORCE PORT FREE LOGIC ] ---
-check_and_free_port() {
+# --- [ AUTONOMOUS PORT FREE LOGIC ] ---
+autonomous_free_port() {
     local port=$1
-    echo -e "${C_CYAN}🔎 Checking if port $port is available...${C_RESET}"
-    
     local pid=$(lsof -t -i:$port)
     if [ -n "$pid" ]; then
         for p in $pid; do
             local process_name=$(ps -p $p -o comm=)
-            echo -e "${C_YELLOW}⚠️ Warning: Port $port is in use by '$process_name' (PID: $p).${C_RESET}"
-            read -p "👉 Force stop this process and its services? (y/n): " choice
-            if [[ "$choice" =~ ^[Yy]$ ]]; then
-                echo -e "${C_BLUE}🛑 Attempting to stop services related to $process_name...${C_RESET}"
-                systemctl stop "$process_name" >/dev/null 2>&1
-                kill -9 "$p" >/dev/null 2>&1
-                sleep 2
-                
-                if ! lsof -i:$port >/dev/null; then
-                    echo -e "${C_GREEN}✅ Port $port has been successfully freed.${C_RESET}"
-                else
-                    echo -e "${C_RED}❌ Failed to free port $port. Manual intervention required.${C_RESET}"
-                    return 1
-                fi
-            else
-                echo -e "${C_RED}❌ Port $port is still in use. Installation aborted.${C_RESET}"
-                return 1
-            fi
+            # Silently stop service or kill process
+            systemctl stop "$process_name" >/dev/null 2>&1
+            kill -9 "$p" >/dev/null 2>&1
         done
+        sleep 2
     fi
-    return 0
 }
 
 # --- [ SSL CERTIFICATE GENERATOR ] ---
@@ -69,13 +54,13 @@ generate_ssl_cert() {
     echo -e "${C_GREEN}✅ SSL Certificate generated successfully.${C_RESET}"
 }
 
-# --- [ CLOUDFLARE DOMAIN INTEGRATION ] ---
+# --- [ DOMAIN CONFIGURATION ] ---
 setup_ssl_domain() {
     echo -e "\n${C_CYAN}🌐 SSL Domain Configuration:${C_RESET}"
-    echo -e "  [1] Auto-generate via Cloudflare API (Subdomain)"
-    echo -e "  [2] Manual Input (Enter your own domain)"
-    read -p "👉 Choice [1]: " domain_choice
-    domain_choice=${domain_choice:-1}
+    echo -e "  [1] Auto-generate (Subdomain)"
+    echo -e "  [2] Manual Input (Enter your own SSL Domain)"
+    read -p "👉 Choice [2]: " domain_choice
+    domain_choice=${domain_choice:-2}
 
     local ssl_domain=""
     if [[ "$domain_choice" == "1" ]]; then
@@ -85,10 +70,8 @@ setup_ssl_domain() {
             if [[ -n "$root_domain" && "$root_domain" != "null" ]]; then
                 ssl_domain="ssl-$(head /dev/urandom | tr -dc a-z0-9 | head -c 4).$root_domain"
                 local server_ip=$(curl -s https://ifconfig.me)
-                echo -e "${C_BLUE}☁️ Creating A record for SSL: $ssl_domain -> $server_ip${C_RESET}"
                 upsert_dns_record "A" "$ssl_domain" "$server_ip"
             else
-                echo -e "${C_RED}❌ Cloudflare API Error or Domain not found.${C_RESET}"
                 read -p "👉 Enter SSL Domain manually: " ssl_domain
             fi
         else
@@ -105,11 +88,11 @@ setup_ssl_domain() {
 install_ssl_tunnel() {
     clear
     echo -e "${C_CYAN}${C_BOLD}===============================================${C_RESET}"
-    echo -e "    🔒 INSTALL SSL TUNNEL (PORT 444) - BEAST EDITION"
+    echo -e "    🔒 INSTALL SSL TUNNEL (PORT 444) - v6.0"
     echo -e "${C_CYAN}${C_BOLD}===============================================${C_RESET}"
 
-    # 1. Check Port
-    check_and_free_port $SSL_PORT || return 1
+    # 1. Autonomous Cleanup
+    autonomous_free_port $SSL_PORT
 
     # 2. Install Stunnel
     echo -e "\n${C_BLUE}📦 Installing Stunnel...${C_RESET}"
@@ -147,7 +130,6 @@ EOF
     echo -e "---------------------------------------"
     echo -e "  - Port:       $SSL_PORT"
     echo -e "  - Domain:     $(cat $BASE_DIR/ssl_domain.info 2>/dev/null || echo "N/A")"
-    echo -e "  - Protocol:   SSL/TLS (Stunnel)"
     echo -e "---------------------------------------"
 }
 
