@@ -1,17 +1,19 @@
 #!/bin/bash
 
 # ==============================================================================
-# JEHAD BEAST - ADVANCED SSL TUNNEL MODULE (PORT 444) - FIREWOODS LOGIC
-# ==============================================================================
-# This module provides high-performance SSL tunneling to bypass social media 
-# restrictions and convert it to regular internet traffic.
+# JEHAD BEAST - ADVANCED SSL TUNNEL MODULE (PORT 444) - FORCE EDITION
 # ==============================================================================
 
 # --- [ CONFIG & PATHS ] ---
+BASE_DIR="/etc/jehad"
+LOG_DIR="$BASE_DIR/logs"
 SSL_CONF="/etc/stunnel/stunnel.conf"
 SSL_CERT="/etc/stunnel/stunnel.pem"
 SSL_PORT=444
 STUNNEL_SERVICE="stunnel4"
+
+# Ensure log directory exists
+mkdir -p "$LOG_DIR"
 
 # --- [ COLORS ] ---
 C_RED=$'\033[38;5;196m'
@@ -21,30 +23,34 @@ C_BLUE=$'\033[38;5;39m'
 C_CYAN=$'\033[38;5;51m'
 C_RESET=$'\033[0m'
 
-# --- [ PORT CHECKER & PROCESS CLEANER ] ---
+# --- [ FORCE PORT FREE LOGIC ] ---
 check_and_free_port() {
     local port=$1
     echo -e "${C_CYAN}🔎 Checking if port $port is available...${C_RESET}"
     
     local pid=$(lsof -t -i:$port)
     if [ -n "$pid" ]; then
-        local process_name=$(ps -p $pid -o comm=)
-        echo -e "${C_YELLOW}⚠️ Warning: Port $port is in use by process '$process_name' (PID: $pid).${C_RESET}"
-        read -p "👉 Do you want to attempt to stop this process? (y/n): " choice
-        if [[ "$choice" =~ ^[Yy]$ ]]; then
-            echo -e "${C_BLUE}🛑 Stopping process PID $pid...${C_RESET}"
-            kill -9 $pid
-            sleep 2
-            if ! lsof -i:$port >/dev/null; then
-                echo -e "${C_GREEN}✅ Port $port has been successfully freed.${C_RESET}"
+        for p in $pid; do
+            local process_name=$(ps -p $p -o comm=)
+            echo -e "${C_YELLOW}⚠️ Warning: Port $port is in use by '$process_name' (PID: $p).${C_RESET}"
+            read -p "👉 Force stop this process and its services? (y/n): " choice
+            if [[ "$choice" =~ ^[Yy]$ ]]; then
+                echo -e "${C_BLUE}🛑 Attempting to stop services related to $process_name...${C_RESET}"
+                systemctl stop "$process_name" >/dev/null 2>&1
+                kill -9 "$p" >/dev/null 2>&1
+                sleep 2
+                
+                if ! lsof -i:$port >/dev/null; then
+                    echo -e "${C_GREEN}✅ Port $port has been successfully freed.${C_RESET}"
+                else
+                    echo -e "${C_RED}❌ Failed to free port $port. Manual intervention required.${C_RESET}"
+                    return 1
+                fi
             else
-                echo -e "${C_RED}❌ Failed to free port $port. Please check manually.${C_RESET}"
+                echo -e "${C_RED}❌ Port $port is still in use. Installation aborted.${C_RESET}"
                 return 1
             fi
-        else
-            echo -e "${C_RED}❌ Port $port is still in use. Installation aborted.${C_RESET}"
-            return 1
-        fi
+        done
     fi
     return 0
 }
@@ -73,21 +79,25 @@ setup_ssl_domain() {
 
     local ssl_domain=""
     if [[ "$domain_choice" == "1" ]]; then
-        source /etc/jehad/modules/dnstt_beast.sh
-        local root_domain=$(get_domain_name)
-        if [[ -n "$root_domain" ]]; then
-            ssl_domain="ssl-$(head /dev/urandom | tr -dc a-z0-9 | head -c 4).$root_domain"
-            local server_ip=$(curl -s https://ifconfig.me)
-            echo -e "${C_BLUE}☁️ Creating A record for SSL: $ssl_domain -> $server_ip${C_RESET}"
-            upsert_dns_record "A" "$ssl_domain" "$server_ip"
+        if [ -f "$BASE_DIR/modules/dnstt_beast.sh" ]; then
+            source "$BASE_DIR/modules/dnstt_beast.sh"
+            local root_domain=$(get_domain_name)
+            if [[ -n "$root_domain" && "$root_domain" != "null" ]]; then
+                ssl_domain="ssl-$(head /dev/urandom | tr -dc a-z0-9 | head -c 4).$root_domain"
+                local server_ip=$(curl -s https://ifconfig.me)
+                echo -e "${C_BLUE}☁️ Creating A record for SSL: $ssl_domain -> $server_ip${C_RESET}"
+                upsert_dns_record "A" "$ssl_domain" "$server_ip"
+            else
+                echo -e "${C_RED}❌ Cloudflare API Error or Domain not found.${C_RESET}"
+                read -p "👉 Enter SSL Domain manually: " ssl_domain
+            fi
         else
-            echo -e "${C_RED}❌ Cloudflare API Error. Falling back to manual.${C_RESET}"
-            read -p "👉 Enter SSL Domain: " ssl_domain
+            read -p "👉 Enter SSL Domain manually: " ssl_domain
         fi
     else
         read -p "👉 Enter your SSL Domain: " ssl_domain
     fi
-    echo "$ssl_domain" > /etc/jehad/ssl_domain.info
+    echo "$ssl_domain" > "$BASE_DIR/ssl_domain.info"
     echo -e "${C_GREEN}✅ SSL Domain set to: $ssl_domain${C_RESET}"
 }
 
@@ -136,7 +146,7 @@ EOF
     echo -e "\n${C_GREEN}✅ SSL TUNNEL INSTALLED SUCCESSFULLY!${C_RESET}"
     echo -e "---------------------------------------"
     echo -e "  - Port:       $SSL_PORT"
-    echo -e "  - Domain:     $(cat /etc/jehad/ssl_domain.info)"
+    echo -e "  - Domain:     $(cat $BASE_DIR/ssl_domain.info 2>/dev/null || echo "N/A")"
     echo -e "  - Protocol:   SSL/TLS (Stunnel)"
     echo -e "---------------------------------------"
 }
@@ -144,10 +154,10 @@ EOF
 # --- [ UNINSTALL SSL TUNNEL ] ---
 uninstall_ssl_tunnel() {
     echo -e "${C_RED}🗑️ Uninstalling SSL Tunnel...${C_RESET}"
-    systemctl stop $STUNNEL_SERVICE
-    systemctl disable $STUNNEL_SERVICE
+    systemctl stop $STUNNEL_SERVICE >/dev/null 2>&1
+    systemctl disable $STUNNEL_SERVICE >/dev/null 2>&1
     apt-get remove --purge -y stunnel4 >/dev/null 2>&1
     rm -f "$SSL_CONF" "$SSL_CERT"
-    rm -f /etc/jehad/ssl_domain.info
+    rm -f "$BASE_DIR/ssl_domain.info"
     echo -e "${C_GREEN}✅ SSL Tunnel uninstalled.${C_RESET}"
 }

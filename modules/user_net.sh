@@ -6,9 +6,16 @@
 # Advanced user creation, connection limiting, and network monitoring.
 # ==============================================================================
 
-DB_FILE="/etc/jehad/users.db"
+BASE_DIR="/etc/jehad"
+LOG_DIR="$BASE_DIR/logs"
+DB_FILE="$BASE_DIR/users.db"
+USER_LOG="$LOG_DIR/user_net.log"
 LIMITER_SCRIPT="/usr/local/bin/jehad-limiter.sh"
 LIMITER_SERVICE="/etc/systemd/system/jehad-limiter.service"
+
+# Ensure directories exist
+mkdir -p "$LOG_DIR"
+touch "$USER_LOG"
 
 # --- [ USER MANAGEMENT ] ---
 add_ssh_user() {
@@ -43,7 +50,8 @@ setup_limiter() {
     
     cat > "$LIMITER_SCRIPT" << 'EOF'
 #!/bin/bash
-DB_FILE="/etc/jehad/users.db"
+BASE_DIR="/etc/jehad"
+DB_FILE="$BASE_DIR/users.db"
 while true; do
     if [[ ! -f "$DB_FILE" ]]; then sleep 30; continue; fi
     current_ts=$(date +%s)
@@ -120,5 +128,5 @@ monitor_traffic() {
 }
 
 # --- [ LOGGING HELPERS ] ---
-log_info() { echo "[INFO] $(date '+%Y-%m-%d %H:%M:%S') - $1" >> "/home/ubuntu/jehad_beast/ov/logs/user_net.log"; }
-log_error() { echo "[ERROR] $(date '+%Y-%m-%d %H:%M:%S') - $1" >> "/home/ubuntu/jehad_beast/ov/logs/user_net.log"; }
+log_info() { echo "[INFO] $(date '+%Y-%m-%d %H:%M:%S') - $1" >> "$USER_LOG"; }
+log_error() { echo "[ERROR] $(date '+%Y-%m-%d %H:%M:%S') - $1" >> "$USER_LOG"; }
